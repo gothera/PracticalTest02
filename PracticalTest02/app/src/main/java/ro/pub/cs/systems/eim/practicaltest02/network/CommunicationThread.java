@@ -17,15 +17,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import cz.msebera.android.httpclient.HttpEntity;
+import cz.msebera.android.httpclient.HttpResponse;
 import cz.msebera.android.httpclient.NameValuePair;
 import cz.msebera.android.httpclient.client.HttpClient;
 import cz.msebera.android.httpclient.client.ResponseHandler;
 import cz.msebera.android.httpclient.client.entity.UrlEncodedFormEntity;
+import cz.msebera.android.httpclient.client.methods.HttpGet;
 import cz.msebera.android.httpclient.client.methods.HttpPost;
 import cz.msebera.android.httpclient.impl.client.BasicResponseHandler;
 import cz.msebera.android.httpclient.impl.client.DefaultHttpClient;
 import cz.msebera.android.httpclient.message.BasicNameValuePair;
 import cz.msebera.android.httpclient.protocol.HTTP;
+import cz.msebera.android.httpclient.util.EntityUtils;
 import ro.pub.cs.systems.eim.practicaltest02.general.Constants;
 import ro.pub.cs.systems.eim.practicaltest02.general.Utilities;
 import ro.pub.cs.systems.eim.practicaltest02.model.WeatherForecastInformation;
@@ -68,17 +72,35 @@ public class CommunicationThread extends Thread {
             } else {
                 Log.i(Constants.TAG, "[COMMUNICATION THREAD] Getting the information from the webservice...");
                 HttpClient httpClient = new DefaultHttpClient();
-                HttpPost httpPost = new HttpPost(Constants.WEB_SERVICE_ADDRESS);
-                List<NameValuePair> params = new ArrayList<>();
-                params.add(new BasicNameValuePair(Constants.QUERY_ATTRIBUTE, city));
-                UrlEncodedFormEntity urlEncodedFormEntity = new UrlEncodedFormEntity(params, HTTP.UTF_8);
-                httpPost.setEntity(urlEncodedFormEntity);
-                ResponseHandler<String> responseHandler = new BasicResponseHandler();
-                String pageSourceCode = httpClient.execute(httpPost, responseHandler);
+                String pageSourceCode = "";
+                if(false) {
+                    HttpPost httpPost = new HttpPost(Constants.WEB_SERVICE_ADDRESS);
+                    List<NameValuePair> params = new ArrayList<>();
+                    params.add(new BasicNameValuePair("q", city));
+                    params.add(new BasicNameValuePair("mode", Constants.WEB_SERVICE_MODE));
+                    params.add(new BasicNameValuePair("APPID", Constants.WEB_SERVICE_API_KEY));
+                    UrlEncodedFormEntity urlEncodedFormEntity = new UrlEncodedFormEntity(params, HTTP.UTF_8);
+                    httpPost.setEntity(urlEncodedFormEntity);
+                    ResponseHandler<String> responseHandler = new BasicResponseHandler();
+
+                    pageSourceCode = httpClient.execute(httpPost, responseHandler);
+                } else {
+                    HttpGet httpGet = new HttpGet(Constants.WEB_SERVICE_ADDRESS + "?q=" + city + "&APPID=" + Constants.WEB_SERVICE_API_KEY);
+                    HttpResponse httpGetResponse = httpClient.execute(httpGet);
+                    HttpEntity httpGetEntity = httpGetResponse.getEntity();
+                    if (httpGetEntity != null) {
+                        pageSourceCode = EntityUtils.toString(httpGetEntity);
+
+                    }
+                }
+
                 if (pageSourceCode == null) {
                     Log.e(Constants.TAG, "[COMMUNICATION THREAD] Error getting the information from the webservice!");
                     return;
-                }
+                } else
+                    Log.i(Constants.TAG, pageSourceCode );
+
+                // FIXME - needs to be updated for openweather API
                 Document document = Jsoup.parse(pageSourceCode);
                 Element element = document.child(0);
                 Elements elements = element.getElementsByTag(Constants.SCRIPT_TAG);
